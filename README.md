@@ -16,7 +16,3 @@ This is a primitive tool to generate a sitemap for https://collections.library.n
 * `node scrape_data.js`
 * Wait for the scrape_data script to complete.
 * `node make_sitemap.js`
-
-## Note
-
-* You may need to delete the contents of the `partials` folder on subsequent runs to avoid duplication.

@@ -1,10 +1,30 @@
-const https = require('https');
+const https = require('https')
 const fs = require('fs')
+const rimraf = require('rimraf')
 
 const COLLECTION_URL = 'https://collections.library.nd.edu/'
 
+const d = new Date()
+const now = d.toISOString()
+
+// Clean up and create partials directory
+const mkdir = () => {
+  fs.mkdirSync(partialDir)
+  console.log(`Created new directory: ${partialDir}`)
+}
+const partialDir = './partials'
+if (fs.existsSync(partialDir)){
+  rimraf(partialDir,  () => {
+    console.log(`Deleted old directory: ${partialDir}`)
+    mkdir()
+  })
+}
+else {
+    mkdir()
+}
+
 const formatEntry = (entry) => {
-  return `<url><loc>${entry}</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`
+  return `<url><loc>${entry}</loc><changefreq>monthly</changefreq><priority>1.0</priority><lastmod>${now}</lastmod></url>`
 }
 
 const get = (url, handleFuction) => {
@@ -97,7 +117,7 @@ const handleItems = (body) => {
 let count = 0
 const write = (entries) => {
   const collectionsSitemapEntry = fs.writeFile(
-    `partials/sitemap-${count++}.xml`,
+    `${partialDir}/sitemap-${count++}.xml`,
     entries,
     (error) => {
       if(error) {

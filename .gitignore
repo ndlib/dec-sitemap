@@ -1,3 +1,4 @@
 node_modules/*
 partials/*
 sitemap.xml
+.DS_Store

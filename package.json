@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "concat-files": "^0.1.1",
-    "junk": "^2.1.0"
+    "junk": "^2.1.0",
+    "rimraf": "^2.6.2"
   }
 }
