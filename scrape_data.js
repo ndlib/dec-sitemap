@@ -23,8 +23,8 @@ else {
     mkdir()
 }
 
-const formatEntry = (entry) => {
-  return `<url><loc>${entry}</loc><changefreq>monthly</changefreq><priority>1.0</priority><lastmod>${now}</lastmod></url>`
+const formatEntry = (entry, change, freq) => {
+  return `<url><loc>${entry}</loc><changefreq>${change}</changefreq><priority>${freq}</priority><lastmod>${now}</lastmod></url>`
 }
 
 const get = (url, handleFuction) => {
@@ -66,7 +66,7 @@ const handleCollections = (body) => {
   const collections = JSON.parse(body)
   for( const index in collections) {
     const honeycombURL = collections[index]['@id']
-    const entry = formatEntry(`${COLLECTION_URL}${collections[index].id}/${collections[index].slug}`, )
+    const entry = formatEntry(`${COLLECTION_URL}${collections[index].id}/${collections[index].slug}`, 'always', '1.0')
     const pageEntries = get(`${honeycombURL}/pages`, handlePages)
     const showcaseEntries = get(`${honeycombURL}/showcases`, handleShowcases)
     const itemEntries = get(`${honeycombURL}/items`, handleItems)
@@ -82,7 +82,7 @@ const handlePages = (body) => {
   const pages = obj.pages
   for(index in pages) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/pages/${pages[index].id}/${pages[index].slug}`
-    const entry = formatEntry(url)
+    const entry = formatEntry(url, 'monthly', '0.5')
     entries.push(entry)
   }
   write(entries.join(''))
@@ -95,7 +95,7 @@ const handleShowcases = (body) => {
   const showcases = obj.showcases
   for(index in showcases) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/showcases/${showcases[index].id}/${showcases[index].slug}`
-    const entry = formatEntry(url)
+    const entry = formatEntry(url, 'daily', '0.9')
     entries.push(entry)
   }
   write(entries.join(''))
@@ -108,7 +108,7 @@ const handleItems = (body) => {
   const items = obj.items
   for(index in items) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/items/${items[index].id}`
-    const entry = formatEntry(url)
+    const entry = formatEntry(url, 'weekly', '0.7')
     entries.push(entry)
   }
   write(entries.join(''))
