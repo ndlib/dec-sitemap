@@ -23,8 +23,13 @@ else {
     mkdir()
 }
 
-const formatEntry = (entry, change, freq) => {
-  return `<url><loc>${entry}</loc><changefreq>${change}</changefreq><priority>${freq}</priority><lastmod>${now}</lastmod></url>`
+const formatEntry = (entry, change, freq, image) => {
+  let imageMarkUp = ''
+  if(image) {
+    imageMarkUp = `<image:image><image:loc>${image}</image:loc></image:image>`
+  }
+  return `<url><loc>${entry}</loc><changefreq>${change}</changefreq><priority>${freq}</priority><lastmod>${now}</lastmod>${imageMarkUp}</url>
+  `
 }
 
 const get = (url, handleFuction) => {
@@ -108,7 +113,14 @@ const handleItems = (body) => {
   const items = obj.items
   for(index in items) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/items/${items[index].id}`
-    const entry = formatEntry(url, 'daily', '0.7')
+    let img
+    if(items[index].media && items[index].media['@id']) {
+      if(items[index].media['@type'] === 'ImageObject') {
+        img = encodeURI(items[index].media['@id'])
+      }
+
+    }
+    const entry = formatEntry(url, 'daily', '0.7', img)
     entries.push(entry)
   }
   write(entries.join(''))
