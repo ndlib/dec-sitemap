@@ -82,7 +82,7 @@ const handlePages = (body) => {
   const pages = obj.pages
   for(index in pages) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/pages/${pages[index].id}/${pages[index].slug}`
-    const entry = formatEntry(url, 'monthly', '0.5')
+    const entry = formatEntry(url, 'daily', '0.5')
     entries.push(entry)
   }
   write(entries.join(''))
@@ -108,7 +108,7 @@ const handleItems = (body) => {
   const items = obj.items
   for(index in items) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/items/${items[index].id}`
-    const entry = formatEntry(url, 'weekly', '0.7')
+    const entry = formatEntry(url, 'daily', '0.7')
     entries.push(entry)
   }
   write(entries.join(''))
