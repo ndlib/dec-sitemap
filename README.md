@@ -13,6 +13,6 @@ This is a primitive tool to generate a sitemap for https://collections.library.n
 
 ## Usage
 
-* `node scrape_data.js`
-* Wait for the scrape_data script to complete.
-* `node make_sitemap.js`
+* `node generate_sitemap.js`
+* Wait for the script to complete.
+* Collect output from sitemap folder.
