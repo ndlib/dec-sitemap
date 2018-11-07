@@ -71,7 +71,7 @@ const handleCollections = (body) => {
   const collections = JSON.parse(body)
   for( const index in collections) {
     const honeycombURL = collections[index]['@id']
-    const entry = formatEntry(`${COLLECTION_URL}${collections[index].id}/${collections[index].slug}`, 'always', '1.0')
+    const entry = formatEntry(`${COLLECTION_URL}${collections[index].id}/${collections[index].slug}`, 'daily', '1.0')
     const pageEntries = get(`${honeycombURL}/pages`, handlePages)
     const showcaseEntries = get(`${honeycombURL}/showcases`, handleShowcases)
     const itemEntries = get(`${honeycombURL}/items`, handleItems)
@@ -87,7 +87,7 @@ const handlePages = (body) => {
   const pages = obj.pages
   for(index in pages) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/pages/${pages[index].id}/${pages[index].slug}`
-    const entry = formatEntry(url, 'daily', '0.5')
+    const entry = formatEntry(url, 'weekly', '0.5')
     entries.push(entry)
   }
   write(entries.join(''))
@@ -100,7 +100,7 @@ const handleShowcases = (body) => {
   const showcases = obj.showcases
   for(index in showcases) {
     const url = `${COLLECTION_URL}${collectionId}/${collectionSlug}/showcases/${showcases[index].id}/${showcases[index].slug}`
-    const entry = formatEntry(url, 'daily', '0.9')
+    const entry = formatEntry(url, 'weekly', '0.9')
     entries.push(entry)
   }
   write(entries.join(''))
@@ -120,7 +120,7 @@ const handleItems = (body) => {
       }
 
     }
-    const entry = formatEntry(url, 'daily', '0.7', img)
+    const entry = formatEntry(url, 'weekly', '0.5', img)
     entries.push(entry)
   }
   write(entries.join(''))
