@@ -3,6 +3,9 @@ const fse = require('fs-extra')
 const rp = require('request-promise')
 
 const COLLECTION_URL = 'https://collections.library.nd.edu/'
+const FILE_HEADER = '<?xml version="1.0" encoding="UTF-8"?>\r\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+  + 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\r\n'
+const FILE_FOOTER = '</urlset>'
 
 const d = new Date()
 const now = d.toISOString()
@@ -30,7 +33,7 @@ const formatEntry = (entry, change, freq, image) => {
 const get = (url, handleFunction, fileStream) => {
   return rp(url)
     .then(function(response) {
-      handleFunction(response, fileStream)
+      return handleFunction(response, fileStream)
     })
     .catch(function(error) {
       console.log(`error: ${error}`)
@@ -38,42 +41,39 @@ const get = (url, handleFunction, fileStream) => {
 }
 
 
-const getCollections = () => {
-  get('https://honeycomb.library.nd.edu/v1/collections', handleCollections)
+const getCollections = (indexStream) => {
+  return get('https://honeycomb.library.nd.edu/v1/collections', handleCollections, indexStream)
 }
 
-const handleCollections = (body) => {
+const handleCollections = (body, indexStream) => {
   const collections = JSON.parse(body)
-  const sitemapIndex = fse.createWriteStream(`${outputDir}/sitemap-index.xml`, { encoding: 'utf8'})
-  sitemapIndex.write('<?xml version="1.0" encoding="UTF-8"?>\r\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\r\n')
 
   let promises = []
   for( const index in collections) {
-    const honeycombURL = collections[index]['@id']
-    const entry = formatEntry(`${COLLECTION_URL}${collections[index].id}/${collections[index].slug}`, 'daily', '1.0')
-    const filename = `sitemap-${collections[index].slug}.xml`
+    const collection = collections[index]
+    const honeycombURL = collection['@id']
+    const entry = formatEntry(`${COLLECTION_URL}${collection.id}/${collection.slug}`, 'daily', '1.0')
+    const filename = `sitemap-${collection.slug}.xml`
 
-    const collectionStream = fse.createWriteStream(`${outputDir}/${filename}`, { encoding: 'utf8'})
-    collectionStream.write('<?xml version="1.0" encoding="UTF-8"?>\r\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
-      + 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\r\n')
-    collectionStream.write(entry)
-    const pageEntries = get(`${honeycombURL}/pages`, handlePages, collectionStream)
-    const showcaseEntries = get(`${honeycombURL}/showcases`, handleShowcases, collectionStream)
-    const itemEntries = get(`${honeycombURL}/items`, handleItems, collectionStream)
-    promises.push(Promise.all([pageEntries, showcaseEntries, itemEntries]).then(function(result) {
-      collectionStream.write('</urlset>')
-      collectionStream.end()
+    const fileStream = fse.createWriteStream(`${outputDir}/${filename}`, { encoding: 'utf8'})
+    fileStream.write(FILE_HEADER)
+    fileStream.write(entry)
+
+    const configUrl = collection['hasPart/metadataConfiguration']
+    const configPromise = configUrl ? get(configUrl, function(body) { handleConfig(body, fileStream, collection) }) : Promise.resolve()
+    const pageEntries = get(`${honeycombURL}/pages`, handlePages, fileStream)
+    const showcaseEntries = get(`${honeycombURL}/showcases`, handleShowcases, fileStream)
+    const itemEntries = get(`${honeycombURL}/items`, handleItems, fileStream)
+    promises.push(Promise.all([configPromise, pageEntries, showcaseEntries, itemEntries]).then(function(result) {
+      fileStream.write(FILE_FOOTER)
+      fileStream.end()
       console.log(`Saved file ${filename}`)
       // Add new sitemap file to the index file
-      sitemapIndex.write(`  <sitemap>\r\n    <loc>${COLLECTION_URL}sitemap/${filename}</loc>\r\n    <lastmod>${now}</lastmod>\r\n  </sitemap>\r\n`)
+      indexStream.write(`  <sitemap>\r\n    <loc>${COLLECTION_URL}sitemap/${filename}</loc>\r\n    <lastmod>${now}</lastmod>\r\n  </sitemap>\r\n`)
     }))
+    //break; // FOR TESTING: Break after first collection. Let's try not to slam honeycomb by generating all of them.
   }
-  Promise.all(promises).then(function() {
-    sitemapIndex.write('</sitemapindex>')
-    sitemapIndex.end()
-    console.log('Saved file sitemap-index.xml')
-    console.log('Done.')
-  })
+  return Promise.all(promises)
 }
 const handlePages = (body, fileStream) => {
   let entries = []
@@ -122,5 +122,36 @@ const handleItems = (body, fileStream) => {
   fileStream.write(entries.join(''))
 }
 
+const handleConfig = (body, fileStream, collection) => {
+  const obj = JSON.parse(body)
+  if (obj.hasAboutPage) {
+    const url = `${COLLECTION_URL}${collection.id}/${collection.slug}/about`
+    const entry = formatEntry(url, 'weekly', '0.5')
+    fileStream.write(entry)
+  }
+}
 
-getCollections()
+
+const writeAll = () => {
+  const sitemapIndex = fse.createWriteStream(`${outputDir}/sitemap-index.xml`, { encoding: 'utf8'})
+  sitemapIndex.write('<?xml version="1.0" encoding="UTF-8"?>\r\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\r\n')
+
+  // Miscellaneous pages that are not fetched as part of collections. Not really likely to change.
+  const entries = []
+  entries.push(FILE_HEADER)
+  entries.push(formatEntry(`${COLLECTION_URL}`, 'monthly', '1.0'))
+  entries.push(FILE_FOOTER)
+  const miscStream = fse.writeFileSync(`${outputDir}/sitemap-misc.xml`, entries.join(''), { encoding: 'utf8' })
+  console.log('Saved file sitemap-misc.xml')
+
+  getCollections(sitemapIndex)
+    .then(function() {
+      //Once all collections are done being written, then we can finish and close the index file
+      sitemapIndex.write('</sitemapindex>')
+      sitemapIndex.end()
+      console.log('Saved file sitemap-index.xml')
+      console.log('Done.')
+    })
+}
+
+writeAll()
