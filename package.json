@@ -3,6 +3,7 @@
     "Promise": "^1.0.5",
     "fs-extra": "^7.0.1",
     "request": "^2.88.0",
-    "request-promise": "^4.2.2"
+    "request-promise": "^4.2.2",
+    "robots-parser": "^2.1.1"
   }
 }

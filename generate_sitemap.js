@@ -1,25 +1,19 @@
-const https = require('https')
 const fse = require('fs-extra')
 const rp = require('request-promise')
+const robotsParser = require('robots-parser')
 
 const COLLECTION_URL = 'https://collections.library.nd.edu/'
 const FILE_HEADER = '<?xml version="1.0" encoding="UTF-8"?>\r\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
   + 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\r\n'
 const FILE_FOOTER = '</urlset>'
+const ROBOTS_UA = 'Googlebot'
 
 const d = new Date()
 const now = d.toISOString()
+let robots = null
 
 // Clean up and create output directory
 const outputDir = './sitemap'
-
-if (fse.existsSync(outputDir)) {
-  fse.removeSync(outputDir)
-  console.log(`Deleted old directory: ${outputDir}`)
-}
-
-fse.mkdirSync(outputDir)
-console.log(`Created new directory: ${outputDir}`)
 
 const formatEntry = (entry, change, freq, image) => {
   let imageMarkUp = ''
@@ -52,7 +46,14 @@ const handleCollections = (body, indexStream) => {
   for( const index in collections) {
     const collection = collections[index]
     const honeycombURL = collection['@id']
-    const entry = formatEntry(`${COLLECTION_URL}${collection.id}/${collection.slug}`, 'daily', '1.0')
+    const collectionPath = `${COLLECTION_URL}${collection.id}/${collection.slug}`
+
+    if (robots && robots.isDisallowed(collectionPath, ROBOTS_UA)) {
+      console.log(`Skipped ${collection.slug} (blocked in robots.txt)`)
+      continue // Ignore this collection and don't make a sitemap file; Move on to the next collection
+    }
+
+    const entry = formatEntry(collectionPath, 'daily', '1.0')
     const filename = `sitemap-${collection.slug}.xml`
 
     const fileStream = fse.createWriteStream(`${outputDir}/${filename}`, { encoding: 'utf8'})
@@ -159,4 +160,26 @@ const writeAll = () => {
     })
 }
 
-writeAll()
+const process = () => {
+  //Get robots.txt file so we know what routes should be excluded from sitemap
+  rp('https://raw.githubusercontent.com/ndlib/beehive/master/public/robots.txt')
+    .then(function(response) {
+      robots = robotsParser(`${COLLECTION_URL}robots.txt`, response)
+      console.log('Loaded robots.txt from ndlib/beehive/master')
+
+      if (fse.existsSync(outputDir)) {
+        fse.removeSync(outputDir)
+        console.log(`Deleted old directory: ${outputDir}`)
+      }
+
+      fse.mkdirSync(outputDir)
+      console.log(`Created new directory: ${outputDir}`)
+
+      writeAll()
+    })
+    .catch(function(error) {
+      console.error(`Error: Failed to retrieve robots.txt.`)
+    })
+}
+
+process()
