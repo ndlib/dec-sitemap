@@ -131,7 +131,7 @@ const handleConfig = (body, fileStream, collection) => {
     fileStream.write(entry)
   }
   if (obj.enableBrowse) {
-    const url = `${COLLECTION_URL}${collection.id}/${collection.slug}/search`
+    const url = `${COLLECTION_URL}${collection.id}/${collection.slug}/search?q=`
     const entry = formatEntry(url, 'weekly', '0.8')
     fileStream.write(entry)
   }
